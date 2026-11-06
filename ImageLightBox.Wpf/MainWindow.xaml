@@ -380,13 +380,18 @@
                                 <Run Text="Map window: WebView2 by Microsoft" />
                                 <LineBreak />
                                 <Run Text="Icons: Segoe Fluent Icons by Microsoft" />
+                                <LineBreak />
+                                <Run Text="Installs and updates:" />
+                                <Hyperlink NavigateUri="https://velopack.io" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">Velopack</Hyperlink>
                             </TextBlock>
                         </StackPanel>
                     </Border>
 
                     <TextBlock Margin="0,16,0,0" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource TextTertiary}" Text="© 2026 Per Hejndorf" />
-                    <Button x:Name="AboutCloseButton" Style="{StaticResource AccentPill}" Content="Close" MinWidth="110" Margin="0,14,0,0"
-                            HorizontalAlignment="Center" Click="OnAboutClose" />
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0" HorizontalAlignment="Center">
+                        <Button x:Name="AboutUpdateButton" Style="{StaticResource PillButton}" Content="Check for updates" Margin="0,0,10,0" Click="OnCheckForUpdates" />
+                        <Button x:Name="AboutCloseButton" Style="{StaticResource AccentPill}" Content="Close" MinWidth="110" Click="OnAboutClose" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>

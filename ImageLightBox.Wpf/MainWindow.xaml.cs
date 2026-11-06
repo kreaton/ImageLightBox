@@ -10,6 +10,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ImageLightBox.Core;
 using Microsoft.Win32;
+using Velopack;
+using Velopack.Sources;
 
 namespace ImageLightBox.Wpf;
 
@@ -17,6 +19,10 @@ public partial class MainWindow : Window
 {
     private const int WheelNotch = 120;
 
+    // Public GitHub repo whose releases BuildRelease.ps1 uploads to
+    private const string RepoUrl = "https://github.com/kreaton/ImageLightBox";
+
+    private readonly UpdateManager _updateManager = new(new GithubSource(RepoUrl, accessToken: null, prerelease: false));
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly ThumbnailLoader _loader;
     private readonly List<string> _files = [];
@@ -653,6 +659,46 @@ public partial class MainWindow : Window
     }
 
     private void OnAboutClose(object sender, RoutedEventArgs e) => CloseAbout();
+
+    private async void OnCheckForUpdates(object sender, RoutedEventArgs e)
+    {
+        if (!_updateManager.IsInstalled)
+        {
+            MessageBox.Show(this, "Updates are only available in the installed app.", "Check for updates", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        AboutUpdateButton.IsEnabled = false;
+        try
+        {
+            var newVersion = await _updateManager.CheckForUpdatesAsync();
+            if (newVersion is null)
+            {
+                MessageBox.Show(this, "You have the latest version.", "Check for updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var confirm = MessageBox.Show(this,
+                $"Version {newVersion.TargetFullRelease.Version} is available. Download and install it now?",
+                "Check for updates", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            await _updateManager.DownloadUpdatesAsync(newVersion);
+
+            // The restart ends the process without raising Closing, which is where settings are saved.
+            _settings.Save();
+            _updateManager.ApplyUpdatesAndRestart(newVersion);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Update failed: {ex.Message}", "Check for updates", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            AboutUpdateButton.IsEnabled = true;
+        }
+    }
 
     private void OnAboutOverlayClick(object sender, MouseButtonEventArgs e) => CloseAbout();
 

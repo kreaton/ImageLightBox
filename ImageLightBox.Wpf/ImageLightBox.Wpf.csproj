@@ -13,6 +13,8 @@
     <Product>ImageLightBox</Product>
     <Authors>Per Hejndorf</Authors>
     <Copyright>Copyright © 2026 Per Hejndorf</Copyright>
+    <!-- Velopack's Program.Main replaces the generated WPF entry point -->
+    <StartupObject>ImageLightBox.Wpf.Program</StartupObject>
     <!-- Magick.NET is x64 native code. -->
     <PlatformTarget>x64</PlatformTarget>
     <!-- WPF's built-in Fluent theme (ThemeMode) is still flagged experimental in .NET 10. -->
@@ -36,6 +38,7 @@
     <!-- Decodes HEIC without the HEIF and HEVC extensions from the Microsoft Store. -->
     <PackageReference Include="Magick.NET-Q8-x64" Version="15.1.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
 </Project>
