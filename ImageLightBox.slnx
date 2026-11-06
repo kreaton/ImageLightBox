@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ImageLightBox.Core/ImageLightBox.Core.csproj" />
+  <Project Path="ImageLightBox.Tests/ImageLightBox.Tests.csproj" />
+  <Project Path="ImageLightBox.Wpf/ImageLightBox.Wpf.csproj" />
+</Solution>

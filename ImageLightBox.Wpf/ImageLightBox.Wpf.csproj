@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>ImageLightBox</AssemblyName>
+    <RootNamespace>ImageLightBox.Wpf</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>ImageLightBox</Product>
+    <Authors>Per Hejndorf</Authors>
+    <Copyright>Copyright © 2026 Per Hejndorf</Copyright>
+    <!-- Magick.NET is x64 native code. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <!-- WPF's built-in Fluent theme (ThemeMode) is still flagged experimental in .NET 10. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImageLightBox.Core\ImageLightBox.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The map page, with Leaflet 1.9.4. -->
+    <Content Include="Map\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Decodes HEIC without the HEIF and HEVC extensions from the Microsoft Store. -->
+    <PackageReference Include="Magick.NET-Q8-x64" Version="15.1.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+
+</Project>

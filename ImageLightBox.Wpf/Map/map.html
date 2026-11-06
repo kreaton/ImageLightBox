@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map</title>
+<link rel="stylesheet" href="leaflet.css">
+<style>
+    html, body, #map { height: 100%; margin: 0; background: #0d0d13; }
+    .leaflet-container { background: #1b1b24; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="leaflet.js"></script>
+<script>
+    // Moves the marker without reloading anything: the map window calls showLocation for each file.
+    const StartZoom = 16;
+    const map = L.map('map', { fadeAnimation: false });
+    map.attributionControl.setPrefix(false);
+    const report = text => window.chrome?.webview?.postMessage(text);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).on('load', () => report('all tiles loaded'))
+      .on('tileerror', () => report('a tile failed'))
+      .addTo(map);
+    const marker = L.marker([0, 0]);
+    let started = false;
+
+    window.showLocation = (latitude, longitude) => {
+        marker.setLatLng([latitude, longitude]);
+        // After the first file this keeps whatever zoom you chose.
+        map.setView([latitude, longitude], started ? map.getZoom() : StartZoom, { animate: false });
+        if (!started) {
+            marker.addTo(map);
+            started = true;
+        }
+    };
+</script>
+</body>
+</html>

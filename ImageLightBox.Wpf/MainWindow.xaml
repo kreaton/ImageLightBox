@@ -1,0 +1,394 @@
+<Window x:Class="ImageLightBox.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ImageLightBox"
+        Icon="app.ico"
+        Width="1280" Height="860" MinWidth="900" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        Foreground="{DynamicResource TextPrimary}"
+        TextOptions.TextFormattingMode="Ideal"
+        Loaded="OnLoaded"
+        Closing="OnClosing"
+        PreviewKeyDown="OnPreviewKeyDown">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!-- The palette, cards and pill buttons follow Mp3Player's look. -->
+        <SolidColorBrush x:Key="TextPrimary" Color="#F5F5FA" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#B4B4C4" />
+        <SolidColorBrush x:Key="TextTertiary" Color="#8A8A9C" />
+        <SolidColorBrush x:Key="CardBrush" Color="#22FFFFFF" />
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#30FFFFFF" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#E5484D" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#8B5CF6" />
+        <SolidColorBrush x:Key="AccentLightBrush" Color="#B79CFB" />
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent" Margin="8,2">
+                            <Grid Width="18" Height="18" VerticalAlignment="Center">
+                                <Border x:Name="Box" CornerRadius="5" Background="#1AFFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1" />
+                                <TextBlock x:Name="Check" FontFamily="{StaticResource IconFont}" Text="&#xE73E;" FontSize="12" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                            </Grid>
+                            <ContentPresenter VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#80FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ButtonIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,1,9,0" />
+        </Style>
+
+        <Style x:Key="PillButton" TargetType="Button">
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="BorderBrush" Value="#26FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                            </Grid.RenderTransform>
+                            <Border x:Name="Bd" CornerRadius="19"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" />
+                            <Border x:Name="Hover" CornerRadius="19" Background="White" Opacity="0" IsHitTestVisible="False" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Hover" Property="Opacity" Value="0.16" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Hover" Property="Opacity" Value="0.06" />
+                                <Setter TargetName="Root" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AccentPill" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style x:Key="DangerPill" TargetType="Button" BasedOn="{StaticResource PillButton}">
+            <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </Window.Resources>
+
+    <Grid ClipToBounds="True">
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF0D0D13" Offset="0" />
+                <GradientStop Color="#FF171722" Offset="1" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Ellipse Width="560" Height="560" HorizontalAlignment="Left" VerticalAlignment="Top"
+                 Margin="-190,-230,0,0" Fill="{StaticResource AccentBrush}" Opacity="0.22" IsHitTestVisible="False">
+            <Ellipse.Effect>
+                <BlurEffect Radius="130" KernelType="Gaussian" />
+            </Ellipse.Effect>
+        </Ellipse>
+
+        <Grid x:Name="MainLayer" Margin="16,14,16,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Source folder and thumbnail size -->
+            <DockPanel Margin="0,0,0,12">
+                <TextBlock Text="Source" Foreground="{StaticResource TextSecondary}" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource PillButton}" Click="OnBrowse" Margin="10,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE838;" />
+                            <TextBlock Text="Browse" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource AccentPill}" Content="Open" Click="OnOpen" Margin="10,0,0,0" />
+                    <TextBlock Text="Size" Foreground="{StaticResource TextSecondary}" FontSize="13" VerticalAlignment="Center" Margin="20,0,10,0" />
+                    <ComboBox x:Name="SizeBox" MinWidth="170" VerticalAlignment="Center" SelectionChanged="OnSizeSelected">
+                        <ComboBoxItem Content="Standard (fits 4)" Tag="0" />
+                        <ComboBoxItem Content="Small (160 px)" Tag="160" />
+                        <ComboBoxItem Content="Medium (240 px)" Tag="240" />
+                        <ComboBoxItem Content="Large (360 px)" Tag="360" />
+                        <ComboBoxItem Content="Extra large (480 px)" Tag="480" />
+                    </ComboBox>
+                    <Button Style="{StaticResource PillButton}" Click="OnAbout" Focusable="False" Margin="10,0,0,0" ToolTip="About ImageLightBox">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE946;" FontSize="15" Margin="0,1,0,0" />
+                    </Button>
+                </StackPanel>
+                <TextBox x:Name="SourceBox" VerticalContentAlignment="Center" KeyDown="OnSourceKeyDown" />
+            </DockPanel>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" MinWidth="200" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" MinWidth="300" />
+                </Grid.ColumnDefinitions>
+
+                <!-- EXIF of the selected file -->
+                <Border Style="{StaticResource Card}">
+                    <Grid>
+                        <TextBlock x:Name="ExifHint" Text="Select a file to see its EXIF." TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextTertiary}" Margin="16" />
+                        <ScrollViewer x:Name="ExifScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                            <ItemsControl x:Name="ExifList" Focusable="False" Margin="14,4,14,12">
+                                <ItemsControl.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource AccentLightBrush}"
+                                                           FontWeight="SemiBold" FontSize="12" Margin="0,12,0,8" />
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ItemsControl.GroupStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{StaticResource TextTertiary}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Value}" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" Focusable="False" />
+
+                <!-- The current page of thumbnails. Focusable so keys work after a click. -->
+                <Grid x:Name="ThumbHost" Grid.Column="2" Background="Transparent"
+                      Focusable="True" FocusVisualStyle="{x:Null}"
+                      SizeChanged="OnThumbHostSizeChanged" PreviewMouseWheel="OnThumbWheel">
+                    <TextBlock x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"
+                               Foreground="{StaticResource TextTertiary}" Text="Enter a source folder to begin." />
+                    <ItemsControl x:Name="ThumbList" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Loaded="OnThumbPanelLoaded" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="4" BorderThickness="3" CornerRadius="12" ToolTip="{Binding Path}"
+                                        MouseLeftButtonDown="OnTileLeftDown" PreviewMouseRightButtonDown="OnTileRightDown">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Delete" InputGestureText="Del" Click="OnDelete">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE74D;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Move to..." InputGestureText="M" Click="OnMove">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8DE;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Copy to..." InputGestureText="C" Click="OnCopy">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8C8;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="{Binding OpenLabel}" InputGestureText="Enter" Click="OnFullScreen">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="{Binding OpenGlyph}" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Show on map" InputGestureText="L" Click="OnMap" IsEnabled="{Binding HasLocation}">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE707;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="24" />
+                                        </Grid.RowDefinitions>
+                                        <Image Source="{Binding Image}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Visibility="{Binding ShowIcon, Converter={StaticResource BoolToVis}}">
+                                            <Viewbox MaxWidth="96" MaxHeight="96" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding IconGlyph}" FontFamily="{StaticResource IconFont}" FontSize="96"
+                                                           Foreground="{StaticResource TextSecondary}" />
+                                            </Viewbox>
+                                            <TextBlock Text="{Binding IconLabel}" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,0"
+                                                       HorizontalAlignment="Center" Foreground="{StaticResource TextSecondary}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Row="1" Text="{Binding FileName}" TextTrimming="CharacterEllipsis"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Margin="6,0"
+                                                   Foreground="{StaticResource TextSecondary}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Grid>
+
+            <!-- Actions on the selected file, and paging. Not focusable so arrow keys and Enter keep working on the files. -->
+            <DockPanel Grid.Row="2" Margin="0,12,4,8">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock x:Name="PageText" VerticalAlignment="Center" Margin="0,0,12,0" FontSize="13" Foreground="{StaticResource TextSecondary}" />
+                    <Button x:Name="PageUpButton" Style="{StaticResource PillButton}" Click="OnPageUp" Focusable="False" ToolTip="Previous page (Page Up)">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE70E;" />
+                    </Button>
+                    <Button x:Name="PageDownButton" Style="{StaticResource PillButton}" Click="OnPageDown" Focusable="False" Margin="6,0,0,0" ToolTip="Next page (Page Down)">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE70D;" />
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="DeleteButton" Style="{StaticResource DangerPill}" Click="OnDelete" Focusable="False" ToolTip="Move to the Recycle Bin (Del)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74D;" />
+                            <TextBlock Text="Delete" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="MoveButton" Style="{StaticResource PillButton}" Click="OnMove" Focusable="False" Margin="6,0,0,0" ToolTip="Move to a folder (M)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE8DE;" />
+                            <TextBlock Text="Move" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="CopyButton" Style="{StaticResource PillButton}" Click="OnCopy" Focusable="False" Margin="6,0,0,0" ToolTip="Copy to a folder (C)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE8C8;" />
+                            <TextBlock Text="Copy" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="FullScreenButton" Style="{StaticResource PillButton}" Click="OnFullScreen" Focusable="False" Margin="6,0,0,0" ToolTip="Show full screen, or play a video in its default player (Enter, or double-click)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="OpenIcon" Style="{StaticResource ButtonIcon}" Text="&#xE740;" />
+                            <TextBlock x:Name="OpenText" Text="Full screen" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="MapButton" Style="{StaticResource PillButton}" Click="OnMap" Focusable="False" Margin="6,0,0,0"
+                            ToolTip="Show where it was taken, on OpenStreetMap (L). This sends the location to openstreetmap.org." ToolTipService.ShowOnDisabled="True">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE707;" />
+                            <TextBlock Text="Map" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+
+            <DockPanel Grid.Row="3">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <CheckBox x:Name="ConfirmDeleteBox" Content="Confirm delete" VerticalAlignment="Center" Focusable="False" Click="OnConfirmChanged" />
+                    <CheckBox x:Name="ConfirmMoveBox" Content="Confirm move" Margin="4,0,0,0" VerticalAlignment="Center" Focusable="False" Click="OnConfirmChanged" />
+                </StackPanel>
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextTertiary}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Grid>
+
+        <!-- About card. A click outside it or Esc closes it. -->
+        <Grid x:Name="AboutOverlay" Background="#B2000000" Visibility="Collapsed" MouseLeftButtonDown="OnAboutOverlayClick">
+            <Border Width="460" CornerRadius="18" Background="#FF22222E" BorderBrush="#40FFFFFF" BorderThickness="1"
+                    Padding="30,26,30,22" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MouseLeftButtonDown="OnAboutCardClick">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="50" ShadowDepth="14" Direction="270" Opacity="0.7" />
+                </Border.Effect>
+                <StackPanel>
+                    <Image x:Name="AboutIcon" Width="88" Height="88" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="ImageLightBox" Margin="0,14,0,0" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="AboutVersion" Margin="0,4,0,0" FontSize="13" HorizontalAlignment="Center" Foreground="{StaticResource AccentLightBrush}" />
+                    <TextBlock Margin="0,12,0,0" FontSize="13.5" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextSecondary}"
+                               Text="Clean up a pile of photos fast: page through thumbnails of a whole folder tree, and delete, move or copy as you go." />
+
+                    <Border Margin="0,18,0,0" Padding="16,12" CornerRadius="10" Background="#22FFFFFF">
+                        <StackPanel>
+                            <TextBlock Text="CREDITS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentLightBrush}" Margin="0,0,0,8" />
+                            <TextBlock FontSize="12.5" TextWrapping="Wrap" LineHeight="21" Foreground="{StaticResource TextSecondary}">
+                                <Run Text="Made by Per Hejndorf, with Claude (Anthropic)" Foreground="{StaticResource TextPrimary}" />
+                                <LineBreak />
+                                <Run Text="Metadata:" />
+                                <Hyperlink NavigateUri="https://github.com/drewnoakes/metadata-extractor-dotnet" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">MetadataExtractor</Hyperlink>
+                                <Run Text="by Drew Noakes (Apache-2.0)" />
+                                <LineBreak />
+                                <Run Text="HEIC:" />
+                                <Hyperlink NavigateUri="https://github.com/dlemstra/Magick.NET" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">Magick.NET</Hyperlink>
+                                <Run Text="by Dirk Lemstra (Apache-2.0)" />
+                                <LineBreak />
+                                <Run Text="Map:" />
+                                <Hyperlink NavigateUri="https://leafletjs.com" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">Leaflet</Hyperlink>
+                                <Run Text="by Volodymyr Agafonkin (BSD-2-Clause)" />
+                                <LineBreak />
+                                <Run Text="Map data: ©" />
+                                <Hyperlink NavigateUri="https://www.openstreetmap.org/copyright" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">OpenStreetMap</Hyperlink>
+                                <Run Text="contributors" />
+                                <LineBreak />
+                                <Run Text="Map window: WebView2 by Microsoft" />
+                                <LineBreak />
+                                <Run Text="Icons: Segoe Fluent Icons by Microsoft" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,16,0,0" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource TextTertiary}" Text="© 2026 Per Hejndorf" />
+                    <Button x:Name="AboutCloseButton" Style="{StaticResource AccentPill}" Content="Close" MinWidth="110" Margin="0,14,0,0"
+                            HorizontalAlignment="Center" Click="OnAboutClose" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
