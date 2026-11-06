@@ -387,7 +387,10 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Margin="0,16,0,0" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource TextTertiary}" Text="© 2026 Per Hejndorf" />
+                    <TextBlock Margin="0,16,0,0" FontSize="12" HorizontalAlignment="Center" Foreground="{StaticResource TextTertiary}">
+                        <Run Text="© 2026 Per Hejndorf ·" />
+                        <Hyperlink NavigateUri="https://github.com/kreaton/ImageLightBox/blob/main/LICENSE" RequestNavigate="OnCreditLink" Foreground="{StaticResource TextPrimary}">MIT License</Hyperlink>
+                    </TextBlock>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0" HorizontalAlignment="Center">
                         <Button x:Name="AboutUpdateButton" Style="{StaticResource PillButton}" Content="Check for updates" Margin="0,0,10,0" Click="OnCheckForUpdates" />
                         <Button x:Name="AboutCloseButton" Style="{StaticResource AccentPill}" Content="Close" MinWidth="110" Click="OnAboutClose" />
