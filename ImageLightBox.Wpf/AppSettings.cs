@@ -15,6 +15,7 @@ internal sealed class AppSettings
     public int ThumbnailSize { get; set; } = GridLayout.Standard;
     public bool ConfirmDelete { get; set; } = true;
     public bool ConfirmMove { get; set; } = true;
+    public bool ImagesOnly { get; set; } = true;
 
     public static AppSettings Load()
     {

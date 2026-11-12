@@ -257,6 +257,13 @@
                                             <MenuItem Header="Show on map" InputGestureText="L" Click="OnMap" IsEnabled="{Binding HasLocation}">
                                                 <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE707;" /></MenuItem.Icon>
                                             </MenuItem>
+                                            <Separator />
+                                            <MenuItem Header="Open with default program" Click="OnOpenWithDefault">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8A7;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Show in File Explorer" Click="OnShowInExplorer">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xEC50;" /></MenuItem.Icon>
+                                            </MenuItem>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid>
@@ -333,6 +340,8 @@
 
             <DockPanel Grid.Row="3">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <CheckBox x:Name="ImagesOnlyBox" Content="Images only" Margin="0,0,4,0" VerticalAlignment="Center" Focusable="False" Click="OnImagesOnlyChanged"
+                              ToolTip="Hide videos, audio and other files that can't be shown as images" />
                     <CheckBox x:Name="ConfirmDeleteBox" Content="Confirm delete" VerticalAlignment="Center" Focusable="False" Click="OnConfirmChanged" />
                     <CheckBox x:Name="ConfirmMoveBox" Content="Confirm move" Margin="4,0,0,0" VerticalAlignment="Center" Focusable="False" Click="OnConfirmChanged" />
                 </StackPanel>

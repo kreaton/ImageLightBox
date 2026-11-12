@@ -13,6 +13,10 @@ public static class FileActions
     public static void OpenWithDefaultApp(string path) =>
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true })?.Dispose();
 
+    /// <summary>Opens File Explorer on the file's folder with the file selected.</summary>
+    public static void ShowInExplorer(string path) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe") { ArgumentList = { $"/select,{path}" } })?.Dispose();
+
     /// <summary>Returns where the file ended up, which is the same path if it already is in that folder.</summary>
     public static string Move(string path, string folder)
     {

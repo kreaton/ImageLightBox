@@ -51,6 +51,7 @@ public partial class MainWindow : Window
 
         ConfirmDeleteBox.IsChecked = _settings.ConfirmDelete;
         ConfirmMoveBox.IsChecked = _settings.ConfirmMove;
+        ImagesOnlyBox.IsChecked = _settings.ImagesOnly;
         SourceBox.Text = _settings.SourceFolder ?? "";
         SizeBox.SelectedItem = SizeBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => TagOf(i) == _settings.ThumbnailSize) ?? SizeBox.Items[0];
 
@@ -95,6 +96,8 @@ public partial class MainWindow : Window
         ShowPage();
         ThumbHost.Focus();
         SetStatus("Scanning...");
+        var imagesOnly = _settings.ImagesOnly;
+        var noun = imagesOnly ? "images" : "files";
 
         try
         {
@@ -104,14 +107,16 @@ public partial class MainWindow : Window
                 var sinceFlush = Stopwatch.StartNew();
                 foreach (var file in FileScanner.Enumerate(root, scan.Token))
                 {
+                    if (imagesOnly && !FileKinds.IsImage(file))
+                        continue;
                     batch.Add(file);
                     if (batch.Count >= 500 || sinceFlush.ElapsedMilliseconds >= 100)
                     {
-                        AddBatch(batch, scan);
+                        AddBatch(batch, scan, noun);
                         sinceFlush.Restart();
                     }
                 }
-                AddBatch(batch, scan);
+                AddBatch(batch, scan, noun);
             }, scan.Token);
         }
         catch (OperationCanceledException)
@@ -119,11 +124,11 @@ public partial class MainWindow : Window
             return; // A newer scan owns the list now.
         }
 
-        SetStatus(_files.Count == 0 ? $"No files in {root}" : $"Found {_files.Count:N0} files in {root}");
+        SetStatus(_files.Count == 0 ? $"No {noun} in {root}" : $"Found {_files.Count:N0} {noun} in {root}");
         RequestImages();
     }
 
-    private void AddBatch(List<string> batch, CancellationTokenSource scan)
+    private void AddBatch(List<string> batch, CancellationTokenSource scan, string noun)
     {
         var files = batch.ToArray();
         batch.Clear();
@@ -138,7 +143,7 @@ public partial class MainWindow : Window
             else
                 UpdatePager();
             if (_files.Count > 0)
-                SetStatus($"Scanning... {_files.Count:N0} files so far");
+                SetStatus($"Scanning... {_files.Count:N0} {noun} so far");
         });
     }
 
@@ -498,6 +503,13 @@ public partial class MainWindow : Window
         _settings.ConfirmMove = ConfirmMoveBox.IsChecked == true;
     }
 
+    private void OnImagesOnlyChanged(object sender, RoutedEventArgs e)
+    {
+        _settings.ImagesOnly = ImagesOnlyBox.IsChecked == true;
+        if (_settings.SourceFolder is not null && Directory.Exists(SourceBox.Text.Trim().Trim('"')))
+            _ = ScanAsync();
+    }
+
     private void OnDelete(object sender, RoutedEventArgs e) => _ = DeleteAsync();
 
     private void OnMove(object sender, RoutedEventArgs e) => _ = MoveAsync();
@@ -507,6 +519,18 @@ public partial class MainWindow : Window
     private void OnFullScreen(object sender, RoutedEventArgs e) => OpenFullScreen();
 
     private void OnMap(object sender, RoutedEventArgs e) => ShowMap();
+
+    private void OnOpenWithDefault(object sender, RoutedEventArgs e)
+    {
+        if (_selected >= 0)
+            OpenExternally(_files[_selected], FileActions.OpenWithDefaultApp, "in its default program");
+    }
+
+    private void OnShowInExplorer(object sender, RoutedEventArgs e)
+    {
+        if (_selected >= 0)
+            OpenExternally(_files[_selected], FileActions.ShowInExplorer, "in File Explorer");
+    }
 
     private Window ActiveOwner => _fullScreen ?? (Window)this;
 
@@ -623,13 +647,15 @@ public partial class MainWindow : Window
         Select(next);
     }
 
-    private void PlayVideo(string path)
+    private void PlayVideo(string path) => OpenExternally(path, FileActions.OpenWithDefaultApp, "in its default player");
+
+    private void OpenExternally(string path, Action<string> open, string where)
     {
         var name = Path.GetFileName(path);
         try
         {
-            FileActions.OpenWithDefaultApp(path);
-            SetStatus($"Opened {name} in its default player");
+            open(path);
+            SetStatus($"Opened {name} {where}");
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException or InvalidOperationException)
         {
