@@ -12,7 +12,7 @@ _Last reviewed: 2026-11-17. Versions are the ones resolved in this repository at
 | Magick.NET-Q8-x64 | 15.1.0 | Apache-2.0 | [NuGet](https://www.nuget.org/packages/Magick.NET-Q8-x64/15.1.0) · [source](https://github.com/dlemstra/Magick.NET) | No |
 | ImageMagick and its delegate libraries (native, inside Magick.NET) | bundled with 15.1.0 | ImageMagick License and others — listed in `Notice.txt` in the Magick.NET package | [imagemagick.org](https://imagemagick.org/script/license.php) | No |
 | Microsoft.Web.WebView2 | 1.0.4314.35 | BSD-3-Clause-style (Microsoft WebView2 SDK licence) | [NuGet](https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4314.35) · [source](https://aka.ms/webview) | No |
-| Velopack | 1.2.161 | MIT | [NuGet](https://www.nuget.org/packages/Velopack/1.2.161) · [source](https://github.com/velopack/velopack) | No |
+| Velopack | 1.3.39-g8d2844f | MIT | [NuGet](https://www.nuget.org/packages/Velopack/1.3.39-g8d2844f) · [source](https://github.com/velopack/velopack) | No |
 | Leaflet (vendored in `ImageLightBox.Wpf/Map`) | 1.9.4 | BSD-2-Clause | [Leaflet/Leaflet](https://github.com/Leaflet/Leaflet) | No |
 
 <details>
