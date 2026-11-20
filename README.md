@@ -89,7 +89,7 @@ Made by Per Hejndorf, with Claude (Anthropic). The same credits are on the About
 | Project | Description |
 | --- | --- |
 | `ImageLightBox.Core` | Scanning, file actions, grid maths and EXIF, with no UI |
-| `ImageLightBox.Wpf` | The app, built with WPF's Fluent theme in dark and styled like Mp3Player |
+| `ImageLightBox.Wpf` | The app, built with WPF's Fluent theme in dark and styled like [Audiofile Player](https://github.com/kreaton/AudiofilePlayer) |
 | `ImageLightBox.Tests` | xUnit tests of the core |
 
 ### Build and run
