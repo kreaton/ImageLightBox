@@ -1,0 +1,22 @@
+{
+  "name": "imagelightbox-promo",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "npm run render:landscape && npm run render:short",
+    "render:landscape": "remotion render Promo out/imagelightbox-promo-4k.mp4 --scale=2",
+    "render:short": "remotion render PromoShort out/imagelightbox-short-4k.mp4 --scale=2"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.547",
+    "@remotion/google-fonts": "4.0.547",
+    "@remotion/media-utils": "4.0.547",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.547"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.3",
+    "typescript": "7.0.2"
+  }
+}

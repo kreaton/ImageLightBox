@@ -1,0 +1,4 @@
+node_modules/
+out/
+# The Pixabay track is not ours to redistribute on its own; see README.md.
+public/music.mp3
