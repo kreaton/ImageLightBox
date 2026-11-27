@@ -10,7 +10,11 @@
         TextOptions.TextFormattingMode="Ideal"
         Loaded="OnLoaded"
         Closing="OnClosing"
-        PreviewKeyDown="OnPreviewKeyDown">
+        PreviewKeyDown="OnPreviewKeyDown"
+        AllowDrop="True"
+        PreviewDragEnter="OnPreviewDragOver"
+        PreviewDragOver="OnPreviewDragOver"
+        PreviewDrop="OnPreviewDrop">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 

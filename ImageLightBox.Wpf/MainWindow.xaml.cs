@@ -495,6 +495,35 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---- Drag and drop a folder ----
+
+    // A dropped folder becomes the source; a dropped file opens the folder it is in.
+    private static string? DroppedFolder(DragEventArgs e)
+    {
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } paths)
+            return null;
+        var path = paths[0];
+        if (Directory.Exists(path))
+            return path;
+        return File.Exists(path) ? Path.GetDirectoryName(path) : null;
+    }
+
+    private void OnPreviewDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = DroppedFolder(e) is not null ? DragDropEffects.Link : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnPreviewDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        if (DroppedFolder(e) is not { } folder)
+            return;
+        SourceBox.Text = folder;
+        Activate();
+        _ = ScanAsync();
+    }
+
     // ---- Actions on the selected image ----
 
     private void OnConfirmChanged(object sender, RoutedEventArgs e)
