@@ -39,11 +39,13 @@ Left-click selects a file and shows its EXIF on the left, or for a movie its dur
 | Delete | Delete |
 | M | Move to a folder |
 | C | Copy to a folder |
+| F2 | Rename |
 | Enter or double-click | Full screen, or play a video |
 | L | Show the location on a map |
 | Esc | Deselect, or leave full screen |
+| F1 | About ImageLightBox |
 
-In full screen, the arrow keys step through files, and Delete, M, C and L work the same.
+In full screen, the arrow keys step through files, and Delete, M, C, F2 and L work the same.
 
 ## The map
 

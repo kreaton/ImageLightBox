@@ -123,6 +123,54 @@ public sealed class FileActionsTests : IDisposable
     }
 
     [Fact]
+    public void Rename_keeps_the_folder_and_the_content()
+    {
+        var source = _temp.Add(@"a\photo.jpg", [1]);
+
+        var renamed = FileActions.Rename(source, "beach.jpg");
+
+        Assert.Equal(Path.Combine(Path.GetDirectoryName(source)!, "beach.jpg"), renamed);
+        Assert.False(File.Exists(source));
+        Assert.Equal([1], File.ReadAllBytes(renamed));
+    }
+
+    [Fact]
+    public void Rename_never_overwrites()
+    {
+        var source = _temp.Add(@"a\photo.jpg", [1]);
+        var other = _temp.Add(@"a\beach.jpg", [2]);
+
+        Assert.NotNull(FileActions.NameProblem(source, "BEACH.jpg"));
+        Assert.Throws<IOException>(() => FileActions.Rename(source, "beach.jpg"));
+        Assert.Equal([1], File.ReadAllBytes(source));
+        Assert.Equal([2], File.ReadAllBytes(other));
+    }
+
+    [Fact]
+    public void Rename_can_change_only_the_case()
+    {
+        var source = _temp.Add(@"a\photo.jpg");
+
+        var renamed = FileActions.Rename(source, "Photo.JPG");
+
+        Assert.Equal(["Photo.JPG"], Directory.GetFiles(Path.GetDirectoryName(source)!).Select(Path.GetFileName));
+        Assert.EndsWith("Photo.JPG", renamed);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("a?b.jpg")]
+    [InlineData(@"sub\b.jpg")]
+    [InlineData("photo.")]
+    public void Bad_names_are_refused(string name)
+    {
+        var source = _temp.Add(@"a\photo.jpg");
+
+        Assert.NotNull(FileActions.NameProblem(source, name));
+    }
+
+    [Fact]
     public void Moving_to_its_own_folder_leaves_the_file_alone()
     {
         var source = _temp.Add(@"a\photo.jpg");

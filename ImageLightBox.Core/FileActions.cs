@@ -36,6 +36,40 @@ public static class FileActions
         return target;
     }
 
+    /// <summary>Why a new file name can't be used, or null when it can.</summary>
+    public static string? NameProblem(string path, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            return "The name can't be empty.";
+        if (newName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return "A file name can't contain any of these characters: \\ / : * ? \" < > |";
+        if (newName.EndsWith('.') || newName.EndsWith(' '))
+            return "A file name can't end with a dot or a space.";
+
+        var target = Path.Combine(Path.GetDirectoryName(path)!, newName);
+        if (!IsSameName(path, target) && (File.Exists(target) || Directory.Exists(target)))
+            return $"There already is a file named \"{newName}\" in this folder.";
+        return null;
+    }
+
+    /// <summary>Renames the file in its own folder and returns the new path. A change of case alone is allowed.</summary>
+    public static string Rename(string path, string newName)
+    {
+        if (NameProblem(path, newName) is { } problem)
+            throw new IOException(problem);
+
+        var target = Path.Combine(Path.GetDirectoryName(path)!, newName);
+        if (string.Equals(path, target, StringComparison.Ordinal))
+            return path;
+        if (!File.Exists(path))
+            throw new FileNotFoundException("The file is gone.", path);
+        File.Move(path, target, overwrite: false);
+        return target;
+    }
+
+    private static bool IsSameName(string path, string target) =>
+        string.Equals(Path.GetFullPath(path), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase);
+
     public static bool IsInFolder(string path, string folder) =>
         string.Equals(
             Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(Path.GetFullPath(path))!),

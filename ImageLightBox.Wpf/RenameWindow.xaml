@@ -1,0 +1,20 @@
+<Window x:Class="ImageLightBox.Wpf.RenameWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rename"
+        Width="480" SizeToContent="Height"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        Background="#FF22222E"
+        TextOptions.TextFormattingMode="Ideal">
+    <StackPanel Margin="22,18,22,18">
+        <TextBlock Text="New file name" FontSize="13" Foreground="#B4B4C4" Margin="0,0,0,8" />
+        <TextBox x:Name="NameBox" FontSize="14" Padding="6,5" TextChanged="OnNameChanged" />
+        <TextBlock x:Name="ProblemText" FontSize="12.5" Foreground="#FF7A7E" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button x:Name="RenameButton" Content="Rename" MinWidth="96" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="96" IsCancel="True" Margin="10,0,0,0" />
+        </StackPanel>
+    </StackPanel>
+</Window>

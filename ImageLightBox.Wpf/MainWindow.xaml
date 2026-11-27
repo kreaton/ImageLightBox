@@ -171,7 +171,7 @@
                         <ComboBoxItem Content="Large (360 px)" Tag="360" />
                         <ComboBoxItem Content="Extra large (480 px)" Tag="480" />
                     </ComboBox>
-                    <Button Style="{StaticResource PillButton}" Click="OnAbout" Focusable="False" Margin="10,0,0,0" ToolTip="About ImageLightBox">
+                    <Button Style="{StaticResource PillButton}" Click="OnAbout" Focusable="False" Margin="10,0,0,0" ToolTip="About ImageLightBox (F1)">
                         <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE946;" FontSize="15" Margin="0,1,0,0" />
                     </Button>
                 </StackPanel>
@@ -254,6 +254,9 @@
                                             </MenuItem>
                                             <MenuItem Header="Copy to..." InputGestureText="C" Click="OnCopy">
                                                 <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8C8;" /></MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Rename..." InputGestureText="F2" Click="OnRename">
+                                                <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8AC;" /></MenuItem.Icon>
                                             </MenuItem>
                                             <MenuItem Header="{Binding OpenLabel}" InputGestureText="Enter" Click="OnFullScreen">
                                                 <MenuItem.Icon><TextBlock FontFamily="{StaticResource IconFont}" Text="{Binding OpenGlyph}" /></MenuItem.Icon>

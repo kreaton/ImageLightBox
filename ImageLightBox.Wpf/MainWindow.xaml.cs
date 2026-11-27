@@ -389,14 +389,20 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // No shortcuts underneath the About card.
+        // No shortcuts underneath the About card. F1 toggles it.
         if (AboutOverlay.Visibility == Visibility.Visible)
         {
-            if (e.Key == Key.Escape)
+            if (e.Key is Key.Escape or Key.F1)
             {
                 CloseAbout();
                 e.Handled = true;
             }
+            return;
+        }
+        if (e.Key == Key.F1 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            OnAbout(this, e);
+            e.Handled = true;
             return;
         }
 
@@ -412,7 +418,7 @@ public partial class MainWindow : Window
             return false;
 
         // Holding a key down must not run through a whole folder of files.
-        if (key is Key.Delete or Key.M or Key.C or Key.L or Key.Enter or Key.F11)
+        if (key is Key.Delete or Key.M or Key.C or Key.L or Key.F2 or Key.Enter or Key.F11)
         {
             if (!isRepeat)
                 _ = RunKeyCommand(key);
@@ -454,6 +460,7 @@ public partial class MainWindow : Window
             case Key.M: await MoveAsync(); break;
             case Key.C: await CopyAsync(); break;
             case Key.L: ShowMap(); break;
+            case Key.F2: await RenameAsync(); break;
             default: OpenFullScreen(); break;
         }
     }
@@ -545,6 +552,8 @@ public partial class MainWindow : Window
 
     private void OnCopy(object sender, RoutedEventArgs e) => _ = CopyAsync();
 
+    private void OnRename(object sender, RoutedEventArgs e) => _ = RenameAsync();
+
     private void OnFullScreen(object sender, RoutedEventArgs e) => OpenFullScreen();
 
     private void OnMap(object sender, RoutedEventArgs e) => ShowMap();
@@ -611,6 +620,49 @@ public partial class MainWindow : Window
             return;
 
         await ActAsync(path, () => $"Copied {name} to {FileActions.Copy(path, folder)}", removesFile: false);
+    }
+
+    /// <summary>Renames in place: the file keeps its position in the list and stays selected.</summary>
+    private async Task RenameAsync()
+    {
+        if (_selected < 0 || _acting)
+            return;
+
+        var index = _selected;
+        var path = _files[index];
+        var dialog = new RenameWindow(ActiveOwner, path);
+        if (dialog.ShowDialog() != true)
+            return;
+        var newName = dialog.NewName;
+        if (newName == Path.GetFileName(path))
+            return;
+
+        _acting = true;
+        try
+        {
+            var renamed = await Task.Run(() => FileActions.Rename(path, newName));
+            if (_files.IndexOf(path) is var at && at >= 0)
+                _files[at] = renamed;
+            _loader.Forget(path);
+            ShowPage();
+            if (_selected == index)
+                Select(index);
+            SetStatus($"Renamed {Path.GetFileName(path)} to {newName}");
+        }
+        catch (FileNotFoundException)
+        {
+            RemoveFromList(path);
+            SetStatus($"{Path.GetFileName(path)} is gone: something else moved or deleted it");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Failed: {ex.Message}");
+            MessageBox.Show(ActiveOwner, ex.Message, Path.GetFileName(path), MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _acting = false;
+        }
     }
 
     private bool Confirm(string message, string title) =>
