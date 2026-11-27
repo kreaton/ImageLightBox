@@ -15,6 +15,8 @@
 
 Page through thumbnails of every file under a folder, and delete, move or copy as you go.
 
+▶️ **[Watch the video on YouTube](https://youtu.be/vI6NcFPA87U)**
+
 ## Install
 
 **[Download the installer](https://github.com/kreaton/ImageLightBox/releases/latest/download/ImageLightBox-win-Setup.exe)** and run it. If your PC doesn't have the .NET 10 Desktop Runtime yet, the installer adds it.
