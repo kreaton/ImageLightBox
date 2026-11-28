@@ -15,7 +15,7 @@
 
 Page through thumbnails of every file under a folder, and delete, move or copy as you go.
 
-▶️ **[Watch the video on YouTube](https://youtu.be/vI6NcFPA87U)**
+▶️ **[Watch the video on YouTube](https://youtu.be/ZQwSIcIjIHs)**
 
 ## Install
 
