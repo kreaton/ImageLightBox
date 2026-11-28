@@ -37,7 +37,7 @@
   <ItemGroup>
     <!-- Decodes HEIC without the HEIF and HEVC extensions from the Microsoft Store. -->
     <PackageReference Include="Magick.NET-Q8-x64" Version="15.1.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4370.26" />
     <PackageReference Include="Velopack" Version="1.3.39-g8d2844f" />
   </ItemGroup>
 
