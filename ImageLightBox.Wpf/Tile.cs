@@ -71,6 +71,38 @@ internal sealed class Tile(int index, string path) : INotifyPropertyChanged
         set { field = value; Changed(); Changed(nameof(ShowIcon)); }
     }
 
+    // What the checks found, as the tooltips of the round tags. Null means no tag.
+
+    public string? DuplicateTip
+    {
+        get;
+        set { field = value; Changed(); Changed(nameof(IsDuplicate)); }
+    }
+
+    public bool IsDuplicate => DuplicateTip is not null;
+
+    public string? ExtensionTip
+    {
+        get;
+        set { field = value; Changed(); Changed(nameof(HasWrongExtension)); }
+    }
+
+    public bool HasWrongExtension => ExtensionTip is not null;
+
+    public string FixExtensionLabel
+    {
+        get;
+        set { field = value; Changed(); }
+    } = "Fix the extension";
+
+    public string? DateTip
+    {
+        get;
+        set { field = value; Changed(); Changed(nameof(DateDiffers)); }
+    }
+
+    public bool DateDiffers => DateTip is not null;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void Changed([CallerMemberName] string? name = null) =>

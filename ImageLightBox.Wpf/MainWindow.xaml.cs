@@ -28,6 +28,12 @@ public partial class MainWindow : Window
     private readonly List<string> _files = [];
     private readonly ObservableCollection<Tile> _tiles = [];
 
+    // What the background checks found, and the files that left the list while they ran.
+    private readonly Dictionary<string, FileCheck> _checks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DuplicateIndex _duplicates = new();
+    private readonly HashSet<string> _gone = new(StringComparer.OrdinalIgnoreCase);
+    private bool _checksDone;
+
     private UniformGrid? _panel;
     private FullScreenWindow? _fullScreen;
     private MapWindow? _map;
@@ -55,7 +61,6 @@ public partial class MainWindow : Window
         SourceBox.Text = _settings.SourceFolder ?? "";
         SizeBox.SelectedItem = SizeBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => TagOf(i) == _settings.ThumbnailSize) ?? SizeBox.Items[0];
 
-        UpdateCommands();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -91,6 +96,11 @@ public partial class MainWindow : Window
 
         _settings.SourceFolder = root;
         _files.Clear();
+        _checks.Clear();
+        _duplicates.Clear();
+        _gone.Clear();
+        _checksDone = false;
+        UpdateCheckSummary("");
         _page = 0;
         Select(-1);
         ShowPage();
@@ -126,6 +136,370 @@ public partial class MainWindow : Window
 
         SetStatus(_files.Count == 0 ? $"No {noun} in {root}" : $"Found {_files.Count:N0} {noun} in {root}");
         RequestImages();
+        await CheckFilesAsync(scan);
+    }
+
+    // ---- Checks: duplicates, wrong extensions, file dates ----
+
+    /// <summary>
+    /// Looks inside every file once the scan is done: its real format and its EXIF date, then
+    /// which files are identical. Tags appear on the thumbnails as results come in.
+    /// </summary>
+    private async Task CheckFilesAsync(CancellationTokenSource scan)
+    {
+        var files = _files.ToArray();
+        if (files.Length == 0)
+            return;
+
+        var found = new System.Collections.Concurrent.ConcurrentQueue<FileCheck>();
+        var done = 0;
+        void Flush()
+        {
+            if (scan != _scan)
+                return;
+            var touchedSelected = false;
+            while (found.TryDequeue(out var check))
+            {
+                if (_gone.Contains(check.Path))
+                    continue;
+                _checks[check.Path] = check;
+                touchedSelected |= _selected >= 0 && _files[_selected] == check.Path;
+            }
+            RefreshTileChecks();
+            UpdateCheckSummary($"Checking files... {done:N0} of {files.Length:N0}");
+            if (touchedSelected)
+                _ = LoadExifAsync(_selected);
+        }
+
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        timer.Tick += (_, _) => Flush();
+        timer.Start();
+        try
+        {
+            // Two at a time, so the thumbnails still get the disk.
+            await Task.Run(() => Parallel.ForEach(files,
+                new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = scan.Token },
+                path =>
+                {
+                    try
+                    {
+                        found.Enqueue(FileChecker.Check(path));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // Gone or locked: nothing to say about it.
+                    }
+                    Interlocked.Increment(ref done);
+                }), scan.Token);
+            timer.Stop();
+            Flush();
+
+            UpdateCheckSummary("Looking for duplicates...");
+            var sizes = _checks.Values.Select(c => (c.Path, c.Length)).ToList();
+            var groups = await Task.Run(() => DuplicateFinder.Find(sizes, scan.Token), scan.Token);
+            if (scan != _scan)
+                return;
+
+            foreach (var group in groups)
+                _duplicates.Add(group.Where(p => !_gone.Contains(p)));
+            _checksDone = true;
+            RefreshTileChecks();
+            UpdateCheckSummary();
+            if (_selected >= 0 && _duplicates.IsDuplicate(_files[_selected]))
+                _ = LoadExifAsync(_selected);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer scan owns the list now.
+        }
+        finally
+        {
+            timer.Stop();
+        }
+    }
+
+    private void RefreshTileChecks()
+    {
+        foreach (var tile in _tiles)
+            ApplyChecks(tile);
+    }
+
+    private void ApplyChecks(Tile tile)
+    {
+        var others = _duplicates.OthersOf(tile.Path);
+        tile.DuplicateTip = others.Count == 0
+            ? null
+            : "Duplicate: exactly the same content as\n" + string.Join("\n", others.Take(8)) + (others.Count > 8 ? $"\n...and {others.Count - 8} more" : "");
+
+        _checks.TryGetValue(tile.Path, out var check);
+        if (check?.WrongExtension is { } actual)
+        {
+            tile.ExtensionTip = $"Wrong extension: this is really a {actual.Name} file.\nIts name should end in {actual.PreferredExtension}.";
+            tile.FixExtensionLabel = $"Rename to {check.FixedName}";
+        }
+        else
+        {
+            tile.ExtensionTip = null;
+            tile.FixExtensionLabel = "Fix the extension";
+        }
+
+        tile.DateTip = check is { DateDiffers: true, Taken: { } taken }
+            ? $"The file date differs from the date taken.\nTaken: {taken.LocalDateTime:g}\nFile modified: {check.ModifiedUtc.ToLocalTime():g}"
+            : null;
+    }
+
+    /// <summary>The selected file's problems, shown first in the side pane.</summary>
+    private IEnumerable<ExifEntry> ProblemEntries(string path)
+    {
+        const string section = "Problems";
+        foreach (var other in _duplicates.OthersOf(path))
+            yield return new(section, "Duplicate of", other);
+        if (!_checks.TryGetValue(path, out var check))
+            yield break;
+        if (check.WrongExtension is { } actual)
+            yield return new(section, "Wrong extension", $"Really a {actual.Name} file, so it should be named {check.FixedName}");
+        if (check is { DateDiffers: true, Taken: { } taken })
+            yield return new(section, "File date differs from date taken",
+                $"Taken {taken.LocalDateTime:g}, file modified {check.ModifiedUtc.ToLocalTime():g}");
+    }
+
+    /// <summary>Progress while checking, the totals after.</summary>
+    private void UpdateCheckSummary(string? progress = null)
+    {
+        var dates = _checks.Values.Count(c => c.DateDiffers);
+        var extensions = _checks.Values.Count(c => c.WrongExtension is not null);
+        SyncDatesButton.IsEnabled = dates > 0;
+        SyncDatesText.Text = dates > 0 ? $"Update all dates ({dates:N0})" : "Update all dates";
+        FixExtensionsButton.IsEnabled = extensions > 0;
+        FixExtensionsText.Text = extensions > 0 ? $"Update all extensions ({extensions:N0})" : "Update all extensions";
+
+        if (progress is not null || !_checksDone)
+        {
+            CheckText.Text = progress ?? CheckText.Text;
+            return;
+        }
+
+        var parts = new List<string>();
+        if (_duplicates.Count > 0)
+            parts.Add(_duplicates.Count == 1 ? "1 duplicate (D)" : $"{_duplicates.Count:N0} duplicates (D)");
+        if (extensions > 0)
+            parts.Add(extensions == 1 ? "1 wrong extension (E)" : $"{extensions:N0} wrong extensions (E)");
+        if (dates > 0)
+            parts.Add(dates == 1 ? "1 date differs (T)" : $"{dates:N0} dates differ (T)");
+        CheckText.Text = parts.Count == 0 ? "No duplicates or other problems" : string.Join("  ·  ", parts);
+    }
+
+    private void OnSyncDate(object sender, RoutedEventArgs e)
+    {
+        if (_selected >= 0 && _checks.TryGetValue(_files[_selected], out var check) && check.DateDiffers)
+            _ = SyncDatesAsync([check.Path]);
+    }
+
+    private void OnSyncAllDates(object sender, RoutedEventArgs e)
+    {
+        var paths = _checks.Values.Where(c => c.DateDiffers).Select(c => c.Path).ToList();
+        if (paths.Count == 0)
+            return;
+        var files = paths.Count == 1 ? "1 file" : $"{paths.Count:N0} files";
+        if (Confirm($"Set the created and modified dates of {files} to the date taken in their EXIF?\n\nThe old dates aren't kept anywhere.", "Update all dates"))
+            _ = SyncDatesAsync(paths);
+    }
+
+    private void OnFixAllExtensions(object sender, RoutedEventArgs e) => _ = FixAllExtensionsAsync();
+
+    /// <summary>
+    /// Renames every file tagged E in place, as X does for one. A name already taken is left
+    /// alone and reported, as nothing is ever overwritten.
+    /// </summary>
+    private async Task FixAllExtensionsAsync()
+    {
+        if (_acting)
+            return;
+        var work = _checks.Values.Where(c => c.FixedName is not null).Select(c => (c.Path, Name: c.FixedName!)).ToList();
+        if (work.Count == 0)
+            return;
+
+        var list = string.Join("\n", work.Take(15).Select(w => $"{Path.GetFileName(w.Path)}  →  {w.Name}"))
+            + (work.Count > 15 ? $"\n...and {work.Count - 15} more" : "");
+        var files = work.Count == 1 ? "1 file" : $"{work.Count:N0} files";
+        if (!Confirm($"Rename {files} to the extension that fits their content?\n\n{list}", "Update all extensions"))
+            return;
+
+        _acting = true;
+        try
+        {
+            var (renamed, failures) = await Task.Run(() =>
+            {
+                var renamed = new List<(string From, string To)>();
+                var failures = new List<string>();
+                foreach (var (path, name) in work)
+                {
+                    try
+                    {
+                        renamed.Add((path, FileActions.Rename(path, name)));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        failures.Add($"{Path.GetFileName(path)}: {ex.Message}");
+                    }
+                }
+                return (renamed, failures);
+            });
+
+            // Renamed in place, so every file keeps its position and the selection stays put.
+            foreach (var (from, to) in renamed)
+            {
+                if (_files.IndexOf(from) is var at && at >= 0)
+                    _files[at] = to;
+                _loader.Forget(from);
+                if (_checks.Remove(from, out var check))
+                    _checks[to] = check with { Path = to };
+                _duplicates.Rename(from, to);
+                _gone.Add(from);
+            }
+            UpdateCheckSummary();
+            ShowPage();
+            if (_selected >= 0)
+                Select(_selected);
+
+            SetStatus($"Fixed the extension of {renamed.Count:N0} file{(renamed.Count == 1 ? "" : "s")}"
+                + (failures.Count > 0 ? $", {failures.Count:N0} failed" : ""));
+            if (failures.Count > 0)
+                MessageBox.Show(ActiveOwner, string.Join("\n", failures.Take(15)), "Some files couldn't be renamed", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _acting = false;
+        }
+    }
+
+    /// <summary>Sets each file's dates to when it was taken, then looks at it again so the tag goes.</summary>
+    private async Task SyncDatesAsync(IReadOnlyList<string> paths)
+    {
+        if (_acting)
+            return;
+
+        var work = paths
+            .Select(p => _checks.TryGetValue(p, out var c) && c.Taken is { } taken ? (Path: p, Taken: taken) : default)
+            .Where(w => w.Path is not null)
+            .ToList();
+        if (work.Count == 0)
+            return;
+
+        _acting = true;
+        try
+        {
+            var (updated, failures) = await Task.Run(() =>
+            {
+                var updated = new List<FileCheck>();
+                var failures = new List<string>();
+                foreach (var (path, taken) in work)
+                {
+                    try
+                    {
+                        FileChecker.SyncDate(path, taken);
+                        updated.Add(FileChecker.Check(path));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        failures.Add($"{Path.GetFileName(path)}: {ex.Message}");
+                    }
+                }
+                return (updated, failures);
+            });
+
+            foreach (var check in updated.Where(c => !_gone.Contains(c.Path)))
+                _checks[check.Path] = check;
+            RefreshTileChecks();
+            UpdateCheckSummary();
+            if (_selected >= 0)
+                _ = LoadExifAsync(_selected);
+
+            SetStatus(work.Count == 1 && failures.Count == 0
+                ? $"Set the date of {Path.GetFileName(work[0].Path)} to {work[0].Taken.LocalDateTime:g}, when it was taken"
+                : $"Synced the dates of {updated.Count:N0} files" + (failures.Count > 0 ? $", {failures.Count:N0} failed" : ""));
+            if (failures.Count > 0)
+                MessageBox.Show(ActiveOwner, string.Join("\n", failures.Take(15)), "Some dates couldn't be set", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _acting = false;
+        }
+    }
+
+    private void OnKeepThis(object sender, RoutedEventArgs e) => _ = KeepThisAsync();
+
+    /// <summary>
+    /// Sends every other copy of the selected file to the Recycle Bin, wherever they are, and
+    /// keeps this one selected. Always asks, as the copies are mostly not on screen.
+    /// </summary>
+    private async Task KeepThisAsync()
+    {
+        if (_selected < 0 || _acting)
+            return;
+
+        var keep = _files[_selected];
+        var others = _duplicates.OthersOf(keep).ToList();
+        if (others.Count == 0)
+            return;
+
+        var list = string.Join("\n", others.Take(15)) + (others.Count > 15 ? $"\n...and {others.Count - 15} more" : "");
+        var copies = others.Count == 1 ? "its duplicate" : $"its {others.Count} duplicates";
+        if (!Confirm($"Keep \"{Path.GetFileName(keep)}\" and move {copies} to the Recycle Bin?\n\n{list}", "Delete duplicates"))
+            return;
+
+        _acting = true;
+        try
+        {
+            var (deleted, failures) = await Task.Run(() =>
+            {
+                var deleted = new List<string>();
+                var failures = new List<string>();
+                foreach (var path in others)
+                {
+                    try
+                    {
+                        FileActions.Recycle(path);
+                        deleted.Add(path);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        deleted.Add(path); // Already gone, which is what was wanted.
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException)
+                    {
+                        failures.Add($"{path}: {ex.Message}");
+                    }
+                }
+                return (deleted, failures);
+            });
+
+            foreach (var path in deleted)
+                ForgetFile(path);
+            UpdateCheckSummary();
+
+            // The kept file has moved up if copies before it went.
+            _selected = _files.IndexOf(keep);
+            if (_selected >= 0)
+                _page = GridLayout.PageOf(_selected, _grid.Count);
+            ShowPage();
+            Select(_selected);
+
+            SetStatus($"Kept {Path.GetFileName(keep)} and deleted {deleted.Count:N0} duplicate{(deleted.Count == 1 ? "" : "s")} (they're in the Recycle Bin)"
+                + (failures.Count > 0 ? $", {failures.Count:N0} failed" : ""));
+            if (failures.Count > 0)
+                MessageBox.Show(ActiveOwner, string.Join("\n", failures.Take(15)), "Some duplicates couldn't be deleted", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _acting = false;
+        }
+    }
+
+    private void OnFixExtension(object sender, RoutedEventArgs e)
+    {
+        if (_selected >= 0 && _checks.TryGetValue(_files[_selected], out var check) && check.FixedName is { } name)
+            _ = RenameToAsync(_selected, name);
     }
 
     private void AddBatch(List<string> batch, CancellationTokenSource scan, string noun)
@@ -203,7 +577,9 @@ public partial class MainWindow : Window
         for (var i = start; i < Math.Min(start + pageSize, _files.Count); i++)
         {
             var image = _loader.GetBest(_files[i], _decodeSize, out var failed);
-            _tiles.Add(new Tile(i, _files[i]) { Image = image, Failed = failed, IsSelected = i == _selected, HasLocation = i == _selected && _location is not null });
+            var tile = new Tile(i, _files[i]) { Image = image, Failed = failed, IsSelected = i == _selected, HasLocation = i == _selected && _location is not null };
+            ApplyChecks(tile);
+            _tiles.Add(tile);
         }
 
         UpdatePager();
@@ -295,26 +671,10 @@ public partial class MainWindow : Window
                 tile.IsSelected = tile.Index == index;
         }
 
-        UpdateCommands();
         _ = LoadExifAsync(index);
 
         if (_fullScreen is not null && index >= 0)
             ShowInFullScreen();
-    }
-
-    private void UpdateCommands()
-    {
-        var any = _selected >= 0;
-        DeleteButton.IsEnabled = any;
-        MoveButton.IsEnabled = any;
-        CopyButton.IsEnabled = any;
-        FullScreenButton.IsEnabled = any;
-        MapButton.IsEnabled = any && _location is not null;
-
-        // Same width either way would be nicer, but the label must say what the button does.
-        var path = any ? _files[_selected] : "";
-        OpenIcon.Text = FileIcon.OpenGlyph(path);
-        OpenText.Text = FileIcon.OpenLabel(path);
     }
 
     private async Task LoadExifAsync(int index)
@@ -333,7 +693,7 @@ public partial class MainWindow : Window
         if (request != _exifRequest)
             return; // The selection moved on while reading.
 
-        var view = new ListCollectionView(details.Entries.ToList());
+        var view = new ListCollectionView(ProblemEntries(path).Concat(details.Entries).ToList());
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ExifEntry.Section)));
         ExifList.ItemsSource = view;
         ExifHint.Visibility = Visibility.Collapsed;
@@ -349,7 +709,6 @@ public partial class MainWindow : Window
     private void SetLocation(MapLocation? location)
     {
         _location = location;
-        UpdateCommands();
         foreach (var tile in _tiles)
             tile.HasLocation = tile.Index == _selected && location is not null;
     }
@@ -418,7 +777,8 @@ public partial class MainWindow : Window
             return false;
 
         // Holding a key down must not run through a whole folder of files.
-        if (key is Key.Delete or Key.M or Key.C or Key.L or Key.F2 or Key.Enter or Key.F11)
+        if (key is Key.Delete or Key.M or Key.C or Key.L or Key.F2 or Key.Enter or Key.F11
+            or Key.K or Key.X or Key.T or Key.O or Key.E)
         {
             if (!isRepeat)
                 _ = RunKeyCommand(key);
@@ -461,6 +821,11 @@ public partial class MainWindow : Window
             case Key.C: await CopyAsync(); break;
             case Key.L: ShowMap(); break;
             case Key.F2: await RenameAsync(); break;
+            case Key.K: await KeepThisAsync(); break;
+            case Key.X: OnFixExtension(this, new RoutedEventArgs()); break;
+            case Key.T: OnSyncDate(this, new RoutedEventArgs()); break;
+            case Key.O: OnOpenWithDefault(this, new RoutedEventArgs()); break;
+            case Key.E: OnShowInExplorer(this, new RoutedEventArgs()); break;
             default: OpenFullScreen(); break;
         }
     }
@@ -633,8 +998,13 @@ public partial class MainWindow : Window
         var dialog = new RenameWindow(ActiveOwner, path);
         if (dialog.ShowDialog() != true)
             return;
-        var newName = dialog.NewName;
-        if (newName == Path.GetFileName(path))
+        await RenameToAsync(index, dialog.NewName);
+    }
+
+    private async Task RenameToAsync(int index, string newName)
+    {
+        var path = _files[index];
+        if (newName == Path.GetFileName(path) || _acting)
             return;
 
         _acting = true;
@@ -644,6 +1014,11 @@ public partial class MainWindow : Window
             if (_files.IndexOf(path) is var at && at >= 0)
                 _files[at] = renamed;
             _loader.Forget(path);
+            if (_checks.Remove(path, out var check))
+                _checks[renamed] = check with { Path = renamed };
+            _duplicates.Rename(path, renamed);
+            _gone.Add(path); // A check still running on the old name has nothing to say any more.
+            UpdateCheckSummary();
             ShowPage();
             if (_selected == index)
                 Select(index);
@@ -710,12 +1085,10 @@ public partial class MainWindow : Window
     /// <summary>The next file moves into its place and gets selected, ready for the next decision.</summary>
     private void RemoveFromList(string path)
     {
-        var index = _files.IndexOf(path);
+        var index = ForgetFile(path);
         if (index < 0)
             return;
-
-        _files.RemoveAt(index);
-        _loader.Forget(path);
+        UpdateCheckSummary();
 
         var next = _files.Count == 0 ? -1 : Math.Min(index, _files.Count - 1);
         _selected = next;
@@ -726,6 +1099,19 @@ public partial class MainWindow : Window
         if (next < 0)
             _fullScreen?.Close();
         Select(next);
+    }
+
+    /// <summary>Takes a file out of the list and everything known about it. Returns where it was, or -1.</summary>
+    private int ForgetFile(string path)
+    {
+        var index = _files.IndexOf(path);
+        if (index >= 0)
+            _files.RemoveAt(index);
+        _loader.Forget(path);
+        _checks.Remove(path);
+        _duplicates.Remove(path);
+        _gone.Add(path);
+        return index;
     }
 
     private void PlayVideo(string path) => OpenExternally(path, FileActions.OpenWithDefaultApp, "in its default player");

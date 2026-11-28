@@ -31,7 +31,7 @@ Enter a source folder and press Enter. Files show up while the scan runs, sorted
 
 JPEG, HEIC, PNG, GIF, BMP, TIFF and WebP files show as pictures. Anything else, such as a `.mov`, gets an icon with its type and file name, and can be deleted, moved or copied just the same.
 
-Left-click selects a file and shows its EXIF on the left, or for a movie its duration, size and camera details. Right-click gives the same actions as the buttons. After a delete or move the next file moves into its place and is selected, ready for the next decision.
+Left-click selects a file and shows its EXIF on the left, or for a movie its duration, size and camera details. Right-click a file for everything you can do with it: delete, move, copy, rename, full screen, map, and the fixes below. Each has a key too. After a delete or move the next file moves into its place and is selected, ready for the next decision.
 
 | Key | Action |
 | --- | --- |
@@ -44,14 +44,27 @@ Left-click selects a file and shows its EXIF on the left, or for a movie its dur
 | F2 | Rename |
 | Enter or double-click | Full screen, or play a video |
 | L | Show the location on a map |
+| K | Keep this file, delete its duplicates |
+| X | Fix the extension |
+| T | Set the file date to the date taken |
+| O | Open with the default program |
+| E | Show in File Explorer |
 | Esc | Deselect, or leave full screen |
 | F1 | About ImageLightBox |
 
-In full screen, the arrow keys step through files, and Delete, M, C, F2 and L work the same.
+In full screen, the arrow keys step through files, and the letter keys, Delete and F2 work the same.
+
+## Duplicates, wrong extensions and dates
+
+After a scan, every file is checked in the background, and round tags appear at the top right of its thumbnail. Hover over a tag for the details, which are also listed first in the side pane.
+
+- **D**: another file has exactly the same content, whatever it's called. Only files of the same size are read and compared. **K** keeps the selected file and sends its duplicates to the Recycle Bin, after asking.
+- **E**: the extension doesn't match what the file really is, such as a PNG named `.jpg`. **X** renames it to the right extension, and **Update all extensions** in the bottom bar does it for every tagged file. Raw photos such as `.dng` are TIFF inside, and aren't flagged.
+- **T**: the file's modified date is more than a minute from the date taken in its EXIF. **T** sets the file's created and modified dates to the date taken, and **Update all dates** in the bottom bar does it for every tagged file. The EXIF time is taken to be in this PC's time zone unless the camera recorded one.
 
 ## The map
 
-Map, on the button or the right-click menu, is available for a file with a GPS position: most phone photos, and iPhone movies. It opens OpenStreetMap in a small window, which keeps following the selection until you close it, without reloading. Closing it only hides it, so it opens again at once.
+Show on map, in the right-click menu or on L, is available for a file with a GPS position: most phone photos, and iPhone movies. It opens OpenStreetMap in a small window, which keeps following the selection until you close it, without reloading. Closing it only hides it, so it opens again at once.
 
 Map tiles come from openstreetmap.org, so which part of the map you're looking at goes there, but only while the map window is open. **Check for updates** contacts GitHub when you choose it. Nothing else leaves the PC. The window needs the WebView2 runtime that comes with Windows 11, and without it the map opens in your browser. The map page itself is drawn by [Leaflet](https://leafletjs.com) 1.9.4, in `ImageLightBox.Wpf\Map`.
 
@@ -59,7 +72,7 @@ If the page hasn't loaded after 15 seconds, the window offers to open the place 
 
 ## Videos
 
-Enter, double-click, and the button and menu item that say Play for a video all open it in its default player. Other files that aren't images only get their icon.
+Enter, double-click, and the menu item that says Play for a video all open it in its default player. Other files that aren't images only get their icon.
 
 ## Good to know
 
