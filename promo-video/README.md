@@ -1,15 +1,15 @@
-# ImageLightBox promo video
+# Image Lightbox promo video
 
-Two introductions to ImageLightBox, made with [Remotion](https://www.remotion.dev/) the same way as the [Audiofile Player](https://github.com/kreaton/AudiofilePlayer) promo. Both are 4K for YouTube:
+Two introductions to Image Lightbox, made with [Remotion](https://www.remotion.dev/) the same way as the [Audiofile Player](https://github.com/kreaton/AudiofilePlayer) promo. Both are 4K for YouTube:
 
 | Composition | Format | Length | File |
 |---|---|---|---|
-| `Promo` | Landscape, 3840×2160 | 101 s | `out/imagelightbox-promo-4k.mp4` |
+| `Promo` | Landscape, 3840×2160 | 116 s | `out/imagelightbox-promo-4k.mp4` |
 | `PromoShort` | Portrait, 2160×3840, for YouTube Shorts | 58 s | `out/imagelightbox-short-4k.mp4` |
 
-The landscape video is cut to the music: every cut lands on a beat of the song (77 BPM), and each scene is four, eight or ten beats long. It goes from opening a folder to the EXIF panel, then the clean-up (a duplicate with its confirmation, then blurred, dark and duplicate shots one key each), moving the keepers, renaming, full screen, the map, movies, the keyboard, and ends with the open-source note, the title and the credits.
+The landscape video is cut to the music: every cut lands on a beat of the song (77 BPM), and each scene is four, eight or ten beats long. It goes from opening a folder to the EXIF panel, then the problem tags (D for a duplicate, E for a wrong extension, T for a file date that differs from the date taken), the clean-up (K keeps one of a pair of twins, then blurred, dark and duplicate shots one key each), fixing an extension and all the dates, moving the keepers, renaming, full screen, the map, movies, the keyboard, and ends with the open-source note, the title and the credits.
 
-The Short stays under 60 seconds, because YouTube blocks a Short of over a minute if the music gets a copyright claim. To give its scenes time to be read, it leaves out the thumbnail sizes, rename, movies and the keyboard.
+The Short stays under 60 seconds, because YouTube blocks a Short of over a minute if the music gets a copyright claim. To give its scenes time to be read, it leaves out the thumbnail sizes, the EXIF panel, moving, renaming, movies and the keyboard.
 
 ## Setup
 
@@ -42,11 +42,11 @@ Remotion is 4.0.547.
 | `src/timing.ts` | Converts beats of the song to frames. |
 | `src/beat.json` | Tempo and first beat, written by `scripts/analyze-beat.mjs`. Run that script again if you change the music. |
 | `scripts/make-library.py` | Builds the demo photo library the screenshots were taken from. |
-| `public/app/` | Screenshots of the real app, version 1.0.5. |
+| `public/app/` | Screenshots of the real app, version 1.0.9. |
 
 ## About the screenshots
 
-They show the real app (version 1.0.5) at 1426×993, browsing a demo library at `P:\Photos` (a `subst` drive). `scripts/make-library.py` builds that library with Pillow from two folders: public-domain paintings from Wikimedia Commons, and AI-generated village scenes. It gives the paintings phone-style names, EXIF from a fictional camera (the "Northwind Trail 12") and GPS positions of real places in Italy, and adds a few rejects (a blurred copy, a dark copy, duplicates) and one movie for the clean-up scenes:
+They show the real app (version 1.0.9) at 1426×993, browsing a demo library at `P:\Photos` (a `subst` drive). `scripts/make-library.py` builds that library with Pillow from two folders: public-domain paintings from Wikimedia Commons, and AI-generated village scenes. It gives the paintings phone-style names, EXIF from a fictional camera (the "Northwind Trail 12") and GPS positions of real places in Italy, and adds a few problems for the clean-up scenes: a blurred copy, a dark copy, exact duplicates under other names, a PNG named `.jpg`, a page of files whose dates differ from their EXIF date, and one movie:
 
 ```bash
 python scripts/make-library.py <paintings> <images> P:\Photos [movie.mp4]

@@ -6,8 +6,8 @@ const SECONDS_PER_BEAT = 60 / beat.bpm;
 /** The frame of a beat of the song; every cut in the video is placed with this. */
 export const b = (n: number) => Math.round((beat.firstBeat + n * SECONDS_PER_BEAT) * FPS);
 
-/** Length of the landscape video, about 100 seconds: the credits end with a fade. */
-export const TOTAL_FRAMES = b(130);
+/** Length of the landscape video, about two minutes: the credits end with a fade. */
+export const TOTAL_FRAMES = b(148);
 
 /** Length of the portrait Short: under a minute, so a claim on the music can't get it blocked. */
 export const SHORT_FRAMES = b(74);

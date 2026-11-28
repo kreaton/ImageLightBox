@@ -5,7 +5,8 @@ Usage: python scripts/make-library.py <paintings folder> <images folder> <output
 The pictures are public-domain paintings from Wikimedia Commons and AI-generated images. They get phone-style names,
 EXIF from a fictional camera (the "Northwind Trail 12") and GPS positions of real places in Italy, so the EXIF panel
 and the map have something to show. A few deliberate rejects (a blurred shot, a dark one, duplicates) give the
-clean-up scenes something to delete.
+clean-up scenes something to delete. The duplicates are byte-for-byte copies, one PNG is named .jpg, and the
+museum folder's file dates are a later copy date, so the app's D, E and T checks each find something.
 """
 import datetime
 import os
@@ -25,7 +26,6 @@ TRIP = [
     ("IMG_2202.jpg", "corot_getty", (42.2930, 12.4110), None),
     ("IMG_2203.jpg", "ciardi", (44.2040, 10.6160), None),
     ("IMG_2204.jpg", "lunde", (41.9630, 12.7980), None),
-    ("IMG_2204 copy.jpg", "lunde", (41.9630, 12.7980), None),
     ("IMG_2205.jpg", "holsoe", (44.1450, 10.6650), None),
     ("IMG_2206.jpg", "linnell", (44.0900, 11.2800), "blur"),
     ("IMG_2207.jpg", "linnell", (44.0900, 11.2800), None),
@@ -39,13 +39,13 @@ TRIP = [
     ("IMG_2215.jpg", "denittis", (44.0900, 11.2850), None),
     ("IMG_2216.jpg", "gioli", (43.7200, 10.4000), None),
     ("IMG_2217.jpg", "oliver", (43.8800, 10.7800), None),
+    ("IMG_2218.jpg", "kyhn", (43.3180, 11.3310), "png"),
 ]
 
 FROM_ANNA = [
     ("scan-001.jpg", "Peppoli.jpg"),
     ("scan-002.jpg", "Priest at door.jpg"),
     ("scan-003.jpg", "Priest teaching children.jpg"),
-    ("copy of scan-003.jpg", "Priest teaching children.jpg"),
     ("scan-004.jpg", "Priest with poor family.jpg"),
     ("scan-005.jpg", "Vintage Village Portrait at the Church Door.png"),
     ("scan-006.jpg", "Chapel with Cassock and stick.jpg"),
@@ -92,7 +92,10 @@ def save(src, dst, when, place=None, effect=None, camera=True):
         gps[3] = "E" if lon >= 0 else "W"
         gps[4] = gps_dms(lon)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
-    im.save(dst, quality=90, exif=exif)
+    if effect == "png":
+        im.save(dst, format="PNG", exif=exif)  # A PNG with a .jpg name, for the wrong-extension tag.
+    else:
+        im.save(dst, quality=90, exif=exif)
     t = when.timestamp()
     os.utime(dst, (t, t))
 
@@ -108,6 +111,16 @@ for i, (name, source) in enumerate(FROM_ANNA):
 
 for i, source in enumerate(MUSEUM):
     save(os.path.join(paintings, source + ".jpg"), os.path.join(out, "Museum visit", f"IMG_{2301 + i}.jpg"), datetime.datetime(2025, 9, 18, 11, 2) + datetime.timedelta(minutes=i * 4), (43.7678, 11.2553))
+
+# Exact copies under other names, for the duplicate tag.
+shutil.copy2(os.path.join(out, "IMG_2204.jpg"), os.path.join(out, "IMG_2204 copy.jpg"))
+anna = os.path.join(out, "Downloads", "from Anna")
+shutil.copy2(os.path.join(anna, "scan-003.jpg"), os.path.join(anna, "copy of scan-003.jpg"))
+
+# The museum photos were copied off the card later, so their file dates no longer match the EXIF.
+copied = datetime.datetime(2025, 10, 3, 20, 15).timestamp()
+for name in os.listdir(os.path.join(out, "Museum visit")):
+    os.utime(os.path.join(out, "Museum visit", name), (copied, copied))
 
 if video:
     # A movie among the photos shows as an icon, and plays in the default player.
